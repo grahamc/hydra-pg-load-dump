@@ -10,3 +10,5 @@ readonly src_dataset=rpool/backups/nixos.org/haumea/safe/postgres
 readonly working_dataset=rpool/scratch/haumea-load-and-dump
 
 zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1
+
+zfs get all "$working_dataset"
