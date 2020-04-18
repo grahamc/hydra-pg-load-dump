@@ -3,12 +3,17 @@
 # shellcheck shell=bash
 
 set -eux
+set -o pipefail
 
 shellcheck "$0"
 
 readonly src_dataset=rpool/backups/nixos.org/haumea/safe/postgres
-readonly working_dataset=rpool/scratch/haumea-load-and-dump
+readonly working_dataset=rpool/scratch/haumea-load-and-dump/target
+readonly src_snap=$(zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1)
 
-zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1
+function finish {
+    zfs destroy "$working_dataset" || true
+}
+trap finish EXIT
 
-zfs get all "$working_dataset"
+zfs clone "$src_snap" "$working_dataset"
