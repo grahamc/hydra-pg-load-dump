@@ -1,0 +1,4 @@
+steps:
+  - command: "./dump.sh"
+    agents:
+    - "postgres-load-and-dump=true"
