@@ -92,4 +92,4 @@ pg_ctl -D "$working_dir" \
 
 pg_dump hydra \
         --create --format=directory --exclude-table users --verbose \
-        --host "$socket" -f ./dump
+        -U postgresql --host "$socket" -f ./dump
