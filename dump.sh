@@ -29,7 +29,18 @@ function finish {
 }
 trap finish EXIT
 
-zfs clone "$src_snap" "$working_dataset"
+if zfs get name "$working_dataset"; then
+    echo "target already exists, aborting"
+    exit 1
+fi
+
+# || true -> we can't mount it, so it'll exit 1
+zfs clone "$src_snap" "$working_dataset" || true
+if ! zfs get name "$working_dataset"; then
+    echo "target does not exist, aborting"
+    exit 1
+fi
+
 # a systemd service is watching this path to mount when the file
 # is changed.
 date > ~/load-n-dump-trigger-mount
