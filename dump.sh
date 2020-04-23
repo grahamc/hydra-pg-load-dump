@@ -62,6 +62,8 @@ while ! mount | grep -q "$working_dataset"; do
     sleep 1
 done
 
+echo "janky sleep waiting for a chown to finish ..."
+sleep 30
 
 pg_ctl -D "$working_dir" \
        -o "-F -h '' -k \"${socket}\"" \
