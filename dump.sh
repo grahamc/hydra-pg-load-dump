@@ -15,19 +15,20 @@ shellcheck "$0"
 
 readonly src_dataset=rpool/backups/nixos.org/haumea/safe/postgres
 readonly working_dataset=rpool/scratch/haumea-load-and-dump/target
+readonly working_dir=/$working_dataset
 readonly src_snap=$(zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1)
 readonly socket=$(pwd)/socket
 
 function finish {
     set +e
-    pg_ctl -D "$working_dataset" \
+    pg_ctl -D "$working_dir" \
            -o "-F -h '' -k \"$socket\"" \
            -w stop -m immediate
 
-    if [ -f "$working_dataset/postmaster.pid" ]; then
-        pg_ctl -D "$working_dataset" \
+    if [ -f "$working_dir/postmaster.pid" ]; then
+        pg_ctl -D "$working_dir" \
                -o "-F -h '' -k \"$socket\"" \
-               -w kill TERM "$(cat "$working_dataset/postmaster.pid")"
+               -w kill TERM "$(cat "$working_dir/postmaster.pid")"
     fi
 
     # a systemd service is watching this path to unmount when the file
@@ -62,7 +63,7 @@ while ! mount | grep -q "$working_dataset"; do
 done
 
 
-pg_ctl -D "$working_dataset" \
+pg_ctl -D "$working_dir" \
        -o "-F -h '' -k \"${socket}\"" \
        -w start
 
