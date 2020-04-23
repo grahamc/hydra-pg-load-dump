@@ -84,6 +84,7 @@ EOF
 
 pg_ctl -D "$working_dir" \
        -o "-F -h '' -k \"${socket}\"" \
+       --timeout 86400 \
        -w start
 
 pg_dump hydra \
