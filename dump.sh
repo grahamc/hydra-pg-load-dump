@@ -89,6 +89,23 @@ pg_ctl -D "$working_dir" \
        --timeout 86400 \
        -w start
 
+# TODO perhaps project owners should be dropped before exporting to
+# avoid schema inconsistencies.
+# hydra=# ALTER TABLE projects DROP COLUMN owner;
+
+echo "starting full dump"
 pg_dump hydra \
         --create --format=directory --exclude-table users --verbose \
-        -U hydra --host "$socket" -f ./dump
+        -U hydra --host "$socket" -f ./backup.dump
+
+echo "creating partial tables"
+psql hydra -U hydra --host "$socket" < copy.sql
+
+echo "starting partial dump"
+pg_dump hydra -Fc \
+        --table tmp_jobsetevals \
+        --table tmp_jobsetevalinputs \
+        --table tmp_jobsetevalmembers \
+        --table tmp_builds \
+        --exclude-table users --verbose \
+        -U hydra --host "$socket" -f ./partial.dump
