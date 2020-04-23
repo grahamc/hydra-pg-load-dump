@@ -38,7 +38,10 @@ function finish {
         echo "waiting for it to unmount ..."
         sleep 1
     done
-    zfs destroy "$working_dataset" || true
+    while zfs get name "$working_dataset"; then
+        zfs destroy "$working_dataset"
+        sleep 1
+    done
     rm -rf "$socket"
 }
 trap finish EXIT
