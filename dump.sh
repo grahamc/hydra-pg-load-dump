@@ -22,6 +22,7 @@ function finish {
     # is changed.
     date > ~/load-n-dump-trigger-unmount
     while mount | grep -q "$working_dataset"; do
+        date > ~/load-n-dump-trigger-unmount
         echo "waiting for it to unmount ..."
         sleep 1
     done
