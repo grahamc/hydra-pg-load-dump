@@ -38,7 +38,7 @@ function finish {
         echo "waiting for it to unmount ..."
         sleep 1
     done
-    while zfs get name "$working_dataset"; then
+    while zfs get name "$working_dataset"; do
         zfs destroy "$working_dataset"
         sleep 1
     done
