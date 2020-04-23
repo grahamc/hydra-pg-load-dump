@@ -17,7 +17,8 @@ readonly src_dataset=rpool/backups/nixos.org/haumea/safe/postgres
 readonly working_dataset=rpool/scratch/haumea-load-and-dump/target
 readonly working_dir=/$working_dataset
 readonly src_snap=$(zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1)
-readonly socket=$(pwd)/socket
+readonly scratch=$(mktemp -d -t tmp.XXXXXXXXXX)
+readonly socket=$scratch/socket
 
 function finish {
     set +e
@@ -39,6 +40,7 @@ function finish {
         sleep 1
     done
     zfs destroy "$working_dataset" || true
+    rm -rf "$scratch"
 }
 trap finish EXIT
 
