@@ -66,6 +66,21 @@ echo "janky sleep waiting for a chown to finish ..."
 sleep 30
 
 rm "$working_dir/postgresql.conf"
+cat <<EOF > "$working_dir/postgresql.conf"
+max_connections = 100
+shared_buffers = 128MB
+min_wal_size = 80MB
+max_wal_size = 1GB
+lc_time = 'en_US.UTF-8'				# locale for time formatting
+lc_numeric = 'en_US.UTF-8'			# locale for number formatting
+lc_monetary = 'en_US.UTF-8'			# locale for monetary formatting
+lc_messages = 'en_US.UTF-8'			# locale for system error message
+log_timezone = 'UTC'
+dynamic_shared_memory_type = posix
+default_text_search_config = 'pg_catalog.english'
+datestyle = 'iso, mdy'
+EOF
+
 pg_ctl -D "$working_dir" \
        -o "-F -h '' -k \"${socket}\"" \
        -w start
