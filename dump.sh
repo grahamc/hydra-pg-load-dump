@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash utillinux -p bash shellcheck -I nixpkgs=channel:nixos-unstable
+#!nix-shell -i bash utillinux -p bash shellcheck postgresql_12 -I nixpkgs=channel:nixos-unstable
 # shellcheck shell=bash
 
 set -eux
@@ -16,11 +16,22 @@ shellcheck "$0"
 readonly src_dataset=rpool/backups/nixos.org/haumea/safe/postgres
 readonly working_dataset=rpool/scratch/haumea-load-and-dump/target
 readonly src_snap=$(zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1)
+readonly socket=$(pwd)/socket
 
 function finish {
+    set +e
+    pg_ctl -D "$working_dataset" \
+           -o "-F -h '' -k \"$socket\"" \
+           -w stop -m immediate
+
+    if [ -f "$working_dataset/postmaster.pid" ]; then
+        pg_ctl -D "$working_dataset" \
+               -o "-F -h '' -k \"$socket\"" \
+               -w kill TERM "$(cat "$working_dataset/postmaster.pid")"
+    fi
+
     # a systemd service is watching this path to unmount when the file
     # is changed.
-    date > ~/load-n-dump-trigger-unmount
     while mount | grep -q "$working_dataset"; do
         date > ~/load-n-dump-trigger-unmount
         echo "waiting for it to unmount ..."
@@ -49,3 +60,12 @@ while ! mount | grep -q "$working_dataset"; do
     echo "waiting for it to mount ..."
     sleep 1
 done
+
+
+pg_ctl -D "$working_dataset" \
+       -o "-F -h '' -k \"${socket}\"" \
+       -w start
+
+pg_dump hydra \
+        --create --format=directory --exclude-table users --verbose \
+        --host "$socket"
