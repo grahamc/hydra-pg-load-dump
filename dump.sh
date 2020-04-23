@@ -65,6 +65,7 @@ done
 echo "janky sleep waiting for a chown to finish ..."
 sleep 30
 
+rm "$working_dir/postgresql.conf"
 pg_ctl -D "$working_dir" \
        -o "-F -h '' -k \"${socket}\"" \
        -w start
