@@ -98,6 +98,10 @@ pg_dump hydra \
         --create --format=directory --exclude-table users --verbose \
         -U hydra --host "$socket" -f ./backup.dump
 
+echo "starting schema dump"
+pg_dump hydra --schema-only \
+        -U hydra --host "$socket" -f ./schema.sql
+
 echo "creating partial tables"
 psql hydra -U hydra --host "$socket" < copy.sql
 
