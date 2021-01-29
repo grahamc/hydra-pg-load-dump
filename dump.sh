@@ -7,17 +7,22 @@ set -o pipefail
 
 shellcheck "$0"
 
-# Required setup:
-# sudo zfs create -p rpool/scratch/haumea-load-and-dump
-# sudo zfs set mountpoint=/rpool/scratch/haumea-load-and-dump rpool/scratch/haumea-load-and-dump
-# sudo zfs allow -dl -u buildkite-agent-pgloadndump create,mount,destroy rpool/scratch/haumea-load-and-dump
-# sudo zfs allow -dl -u buildkite-agent-pgloadndump clone,create,mount rpool/backups/nixos.org/haumea/safe/postgres
-
-readonly src_dataset=rpool/backups/nixos.org/haumea/safe/postgres
-readonly working_dataset=rpool/scratch/haumea-load-and-dump/target
-readonly working_dir=/$working_dataset
+readonly src_dataset=hydra/repl/rpool/backups/nixos.org/haumea/safe/postgres
+readonly working_dataset_parent=hydra/scratch/haumea-load-and-dump
+readonly working_dataset=$working_dataset_parent/target
+readonly working_dir_parent=/$working_dataset_parent
+readonly working_dir=$working_dir_parent/target
 readonly src_snap=$(zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1)
 readonly socket=$(mktemp -d -t tmp.XXXXXXXXXX)
+
+
+cat <<EOS
+# Required setup:
+# sudo zfs create -p $working_dataset_parent
+# sudo zfs set mountpoint=$working_dir_parent $working_dataset_parent
+# sudo zfs allow -dl -u $(whoami) create,mount,canmount,destroy $working_dataset_parent
+# sudo zfs allow -dl -u $(whoami) clone,create,mount $src_dataset
+EOS
 
 function finish {
     set +e
