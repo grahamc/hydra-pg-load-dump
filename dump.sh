@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash utillinux -p bash shellcheck postgresql_11 -I nixpkgs=channel:nixos-unstable
+#!nix-shell -i bash utillinux -p bash shellcheck postgresql_11 xz -I nixpkgs=channel:nixos-unstable
 # shellcheck shell=bash
 
 set -eux
@@ -100,8 +100,9 @@ pg_ctl -D "$working_dir" \
 
 echo "starting full dump"
 pg_dump hydra \
-        --create --format=directory --exclude-table users --verbose \
-        -U hydra --host "$socket" -f ./backup.dump
+        --create --exclude-table users --verbose \
+        --quote-all-identifiers --inserts --disable-dollar-quoting \
+        -U hydra --host "$socket" | xz -T 0 > ./backup.dump.xz
 
 echo "starting schema dump"
 pg_dump hydra --schema-only \
