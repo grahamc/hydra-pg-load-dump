@@ -1,5 +1,5 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash utillinux -p bash shellcheck postgresql_11 xz -I nixpkgs=channel:nixos-unstable
+#!nix-shell -i bash utillinux -p bash shellcheck postgresql_12 xz -I nixpkgs=channel:nixos-unstable
 # shellcheck shell=bash
 
 set -eux
