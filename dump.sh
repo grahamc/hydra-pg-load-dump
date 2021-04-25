@@ -9,55 +9,57 @@ shellcheck "$0"
 
 readonly src_dataset=hydra/repl/rpool/backups/nixos.org/haumea/safe/postgres
 readonly working_dataset_parent=hydra/scratch/haumea-load-and-dump
-readonly working_dataset=$working_dataset_parent/target
-readonly working_dir_parent=/$working_dataset_parent
-readonly working_dir=$working_dir_parent/target
-readonly src_snap=$(zfs list -t snapshot -H -S createtxg -p -o name "$src_dataset" | head -n1)
-readonly socket=$(mktemp -d -t tmp.XXXXXXXXXX)
+readonly working_dataset="${working_dataset_parent}/target"
+readonly working_dir_parent="/${working_dataset_parent}"
+readonly working_dir="${working_dir_parent}/target"
+src_snap="$(zfs list -t snapshot -H -S createtxg -p -o name "${src_dataset}" | head -n1)"
+readonly src_snap
+socket="$(mktemp -d -t tmp.XXXXXXXXXX)"
+readonly socket
 
 
 cat <<EOS
 # Required setup:
-# sudo zfs create -p $working_dataset_parent
-# sudo zfs set mountpoint=$working_dir_parent $working_dataset_parent
-# sudo zfs allow -dl -u $(whoami) create,mount,canmount,destroy $working_dataset_parent
-# sudo zfs allow -dl -u $(whoami) clone,create,mount $src_dataset
+# sudo zfs create -p ${working_dataset_parent}
+# sudo zfs set mountpoint=${working_dir_parent} ${working_dataset_parent}
+# sudo zfs allow -dl -u $(whoami) create,mount,canmount,destroy ${working_dataset_parent}
+# sudo zfs allow -dl -u $(whoami) clone,create,mount ${src_dataset}
 EOS
 
 function finish {
     set +e
-    pg_ctl -D "$working_dir" \
-           -o "-F -h '' -k \"$socket\"" \
+    pg_ctl -D "${working_dir}" \
+           -o "-F -h '' -k \"${socket}\"" \
            -w stop -m immediate
 
-    if [ -f "$working_dir/postmaster.pid" ]; then
-        pg_ctl -D "$working_dir" \
-               -o "-F -h '' -k \"$socket\"" \
-               -w kill TERM "$(cat "$working_dir/postmaster.pid")"
+    if [ -f "${working_dir}/postmaster.pid" ]; then
+        pg_ctl -D "${working_dir}" \
+               -o "-F -h '' -k \"${socket}\"" \
+               -w kill TERM "$(cat "${working_dir}/postmaster.pid")"
     fi
 
     # a systemd service is watching this path to unmount when the file
     # is changed.
-    while mount | grep -q "$working_dataset"; do
+    while mount | grep -q "${working_dataset}"; do
         date > ~/load-n-dump-trigger-unmount
         echo "waiting for it to unmount ..."
         sleep 1
     done
-    while zfs get name "$working_dataset"; do
-        zfs destroy "$working_dataset"
+    while zfs get name "${working_dataset}"; do
+        zfs destroy "${working_dataset}"
         sleep 1
     done
-    rm -rf "$socket"
+    rm -rf "${socket}"
 }
 trap finish EXIT
 
-if zfs get name "$working_dataset"; then
+if zfs get name "${working_dataset}"; then
     echo "target already exists, aborting"
     exit 1
 fi
 
-zfs clone -o canmount=noauto "$src_snap" "$working_dataset"
-if ! zfs get name "$working_dataset"; then
+zfs clone -o canmount=noauto "${src_snap}" "${working_dataset}"
+if ! zfs get name "${working_dataset}"; then
     echo "target does not exist, aborting"
     exit 1
 fi
@@ -65,7 +67,7 @@ fi
 # a systemd service is watching this path to mount when the file
 # is changed.
 date > ~/load-n-dump-trigger-mount
-while ! mount | grep -q "$working_dataset"; do
+while ! mount | grep -q "${working_dataset}"; do
     echo "waiting for it to mount ..."
     sleep 1
 done
@@ -73,8 +75,8 @@ done
 echo "janky sleep waiting for a chown to finish ..."
 sleep 30
 
-rm "$working_dir/postgresql.conf"
-cat <<EOF > "$working_dir/postgresql.conf"
+rm "${working_dir}/postgresql.conf"
+cat <<EOF > "${working_dir}/postgresql.conf"
 max_connections = 100
 shared_buffers = 128MB
 min_wal_size = 80MB
@@ -89,7 +91,7 @@ default_text_search_config = 'pg_catalog.english'
 datestyle = 'iso, mdy'
 EOF
 
-pg_ctl -D "$working_dir" \
+pg_ctl -D "${working_dir}" \
        -o "-F -h '' -k \"${socket}\"" \
        --timeout 86400 \
        -w start
@@ -102,14 +104,14 @@ echo "starting full dump"
 pg_dump hydra \
         --create --exclude-table users --verbose \
         --quote-all-identifiers --inserts --disable-dollar-quoting \
-        -U hydra --host "$socket" | xz -T 0 > ./backup.dump.xz
+        -U hydra --host "${socket}" | xz -T 0 > ./backup.dump.xz
 
 echo "starting schema dump"
 pg_dump hydra --schema-only \
-        -U hydra --host "$socket" -f ./schema.sql
+        -U hydra --host "${socket}" -f ./schema.sql
 
 echo "creating partial tables"
-psql hydra -U hydra --host "$socket" < copy.sql
+psql hydra -U hydra --host "${socket}" < copy.sql
 
 echo "starting partial dump"
 pg_dump hydra -Fc \
@@ -119,4 +121,4 @@ pg_dump hydra -Fc \
         --table tmp_builds \
         --table tmp_buildsteps \
         --exclude-table users --verbose \
-        -U hydra --host "$socket" -f ./partial.dump
+        -U hydra --host "${socket}" -f ./partial.dump
