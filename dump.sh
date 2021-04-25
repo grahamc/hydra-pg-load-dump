@@ -117,5 +117,6 @@ pg_dump hydra -Fc \
         --table tmp_jobsetevalinputs \
         --table tmp_jobsetevalmembers \
         --table tmp_builds \
+        --table tmp_buildsteps \
         --exclude-table users --verbose \
         -U hydra --host "$socket" -f ./partial.dump
